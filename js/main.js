@@ -19,6 +19,8 @@
   const isPhone = () => innerWidth < 700;
   const dockCards = () => innerWidth < 1000 || innerWidth / innerHeight < 1.1; // cards sit at the bottom
   const narrowTitle = () => innerWidth / innerHeight < 1.4;                     // title art can't fit → HTML name
+  const isPortrait = () => innerWidth / innerHeight < 1;                          // phone framing: centre on the face
+  const PORTRAIT = isPortrait(); // the film is built for one framing; rotating the device rebuilds the page
 
   /* Blade → section mapping (order of flight) */
   const BLADES = [
@@ -153,6 +155,13 @@
     return { rw, rh, ox: (W - rw) * fx, oy: (H - rh) * fy };
   }
 
+  // object-position (0–1) that puts image x-fraction `x` in the middle of the screen
+  function centerOn(x) {
+    const W = innerWidth, rw = coverRect(W, innerHeight, 0, 0).rw;
+    if (rw <= W) return 0.5;
+    return gsap.utils.clamp(0, 1, (W / 2 - +x * rw) / (W - rw));
+  }
+
   let lastW = 0;
   function sizeTrack() {
     if (innerWidth === lastW) return; // ignore mobile URL-bar height changes
@@ -170,14 +179,18 @@
     $(".layer__fit").style.transform = `scale(${fit})`;
     $(".layer__fit").classList.toggle("is-fit", fit < 1);
 
+    document.body.classList.toggle("is-portrait", PORTRAIT);
     $$(".layer").forEach(layer => {
       const fx = +layer.dataset.fx, fy = +layer.dataset.fy;
-      $$("img", layer).forEach(img => (img.style.objectPosition = `${fx * 100}% ${fy * 100}%`));
+      // portrait: frame the face (blades start framed on the blade, then pan to the face)
+      const pos = PORTRAIT ? `${centerOn(layer.dataset.bx ?? layer.dataset.mfx) * 100}% 50%` : `${fx * 100}% ${fy * 100}%`;
+      $$("img", layer).forEach(img => (img.style.objectPosition = pos));
       if (layer.dataset.bx == null) return;
+      if (PORTRAIT) { $("img", layer).style.transformOrigin = "50% 50%"; }
       const r = coverRect(W, H, fx, fy);
       const px = r.ox + +layer.dataset.bx * r.rw;
       const py = r.oy + +layer.dataset.by * r.rh;
-      $("img", layer).style.transformOrigin = `${px}px ${py}px`;
+      if (!PORTRAIT) $("img", layer).style.transformOrigin = `${px}px ${py}px`;
 
       const t = $(`.target[data-for="${layer.dataset.id}"]`);
       const ring = $(".target__ring", t), card = $(".target__card", t), line = $(".target__line", t);
@@ -327,13 +340,22 @@
     tl.fromTo(heroOv, { y: 0, autoAlpha: 1 }, { y: -80, autoAlpha: 0, duration: 0.45, ease: "power2.in" }, 0.25);
     tl.fromTo(".scroll-cue", { autoAlpha: 1 }, { autoAlpha: 0, duration: 0.2 }, 0.05);
     // camera orbits: the hero swings away on Y while the profile swings in from the other side
-    tl.fromTo(L("hero"), { rotateY: 0, rotateZ: 0, xPercent: 0, z: 0 },
-      { rotateY: -82, rotateZ: -3, xPercent: -38, z: -380, duration: 0.75, ease: "power2.in" }, 0.55);
-    tl.to(L("hero"), { autoAlpha: 0, duration: 0.25 }, 1.05);
     let s = sceneById("profile").at;
-    tl.set(L("profile"), { autoAlpha: 1 }, 0.85);
-    tl.fromTo(L("profile"), { rotateY: 82, rotateZ: 3, xPercent: 38, z: -380, opacity: 0 },
-      { rotateY: 0, rotateZ: 0, xPercent: 0, z: 0, opacity: 1, duration: 0.75, ease: "power2.out" }, 0.85);
+    if (PORTRAIT) {
+      tl.set(L("profile"), { autoAlpha: 1 }, 0.6);
+      tl.fromTo(L("hero"), { xPercent: 0, rotateY: 0, transformOrigin: "100% 50%" },
+        { xPercent: -100, rotateY: -18, duration: 0.75, ease: "power2.inOut" }, 0.6);
+      tl.fromTo(L("profile"), { xPercent: 100, rotateY: 18, transformOrigin: "0% 50%" },
+        { xPercent: 0, rotateY: 0, duration: 0.75, ease: "power2.inOut" }, 0.6);
+      tl.set(L("hero"), { autoAlpha: 0 }, 1.36);
+    } else {
+      tl.fromTo(L("hero"), { rotateY: 0, rotateZ: 0, xPercent: 0, z: 0 },
+        { rotateY: -82, rotateZ: -3, xPercent: -38, z: -380, duration: 0.75, ease: "power2.in" }, 0.55);
+      tl.to(L("hero"), { autoAlpha: 0, duration: 0.25 }, 1.05);
+      tl.set(L("profile"), { autoAlpha: 1 }, 0.85);
+      tl.fromTo(L("profile"), { rotateY: 82, rotateZ: 3, xPercent: 38, z: -380, opacity: 0 },
+        { rotateY: 0, rotateZ: 0, xPercent: 0, z: 0, opacity: 1, duration: 0.75, ease: "power2.out" }, 0.85);
+    }
     flare(0.8);
     drift("profile", 1.22, 1.06, 0.85, s + 0.2, { to: { ease: "power3.out" } });
     drift("profile", 1.06, 1.14, s + 0.2, nextAt("profile"));
@@ -401,7 +423,7 @@
       const id = b.layer;
       s = sceneById(id).at;
       const end = nextAt(id);
-      const last = id === "blade5";
+      const last = id === "blade5" && !PORTRAIT;
       const prev = SCENES[SCENES.findIndex(x => x.id === id) - 1].id;
       tl.set(L(id), { autoAlpha: 0 }, s - 0.45);
       tl.to(L(id), { autoAlpha: 1, duration: 0.35 }, s - 0.45);
@@ -411,6 +433,12 @@
         { from: { rotate: i % 2 ? -6 : 6, filter: "blur(4px)" }, to: { rotate: 0, filter: "blur(0px)", ease: "power3.out" } });
       // hold: barely moving while the card is up (blade V eases *out* so the full figure is in frame)
       drift(id, last ? 1.0 : 1.08, last ? 0.88 : 1.14, s + 0.1, end - 0.45, { to: { ease: "sine.inOut" } });
+      if (PORTRAIT) {
+        const lay = L(id);
+        tl.fromTo(IMG(id), { objectPosition: `${centerOn(lay.dataset.bx) * 100}% 50%` },
+          { objectPosition: `${centerOn(lay.dataset.mfx) * 100}% 50%`, duration: end - s - 0.9, ease: "sine.inOut" }, s + 0.35);
+        if (id === "blade5") tl.to(IMG(id), { scale: 1.3, duration: 0.45, ease: "power1.in" }, end - 0.45);
+      }
       // (the next blade's entrance pushes this one out; the last one recedes into the wide shot)
       if (last) tl.to(IMG(id), { scale: 0.8, duration: 0.45, ease: "power1.in" }, end - 0.45);
       retire(prev, s);
@@ -892,7 +920,10 @@
     let rT;
     addEventListener("resize", () => {
       clearTimeout(rT);
-      rT = setTimeout(() => { sizeTrack(); layout(); ScrollTrigger.refresh(); }, 150);
+      rT = setTimeout(() => {
+        if (isPortrait() !== PORTRAIT) return location.reload();
+        sizeTrack(); layout(); ScrollTrigger.refresh();
+      }, 150);
     });
   }
 

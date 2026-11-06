@@ -517,6 +517,10 @@ main { position: relative; z-index: 2; pointer-events: none; }
 
 /* Docked mode (set from JS for portrait tablets and phones): blade cards sit at the bottom */
 body.is-docked .target__line { display: none; }
+/* portrait: shots are framed on the face, so the blade lock-on ring has nothing fixed to sit on */
+body.is-portrait .target__ring { display: none; }
+/* letterbox bars read as empty strips on a tall phone screen */
+body.is-portrait .bars { display: none; }
 body.is-docked .target__card { width: min(440px, calc(100vw - 32px)); }
 
 /* Portrait screens: scene copy stacks at the bottom over a scrim */
