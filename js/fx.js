@@ -56,7 +56,7 @@
     const u = {};
     ["t", "amt", "warm", "aspect", "rush", "mouse"].forEach(k => (u[k] = gl.getUniformLocation(prog, k)));
 
-    const SCALE = 0.42; // render at reduced resolution; smoke is soft anyway
+    const SCALE = innerWidth < 700 ? 0.3 : 0.42; // render at reduced resolution; smoke is soft anyway
     const resize = () => {
       smokeCanvas.width = Math.max(2, Math.round(innerWidth * SCALE));
       smokeCanvas.height = Math.max(2, Math.round(innerHeight * SCALE));
@@ -88,6 +88,17 @@
   const ctx = ec.getContext("2d");
   let W, H, dpr;
   const parts = [];
+  const sprite = document.createElement("canvas");
+  sprite.width = sprite.height = 64;
+  (() => {
+    const c = sprite.getContext("2d");
+    const g = c.createRadialGradient(32, 32, 0, 32, 32, 32);
+    g.addColorStop(0, "rgba(255,214,150,1)");
+    g.addColorStop(0.3, "rgba(255,122,26,.6)");
+    g.addColorStop(1, "rgba(255,80,0,0)");
+    c.fillStyle = g;
+    c.fillRect(0, 0, 64, 64);
+  })();
   const MAX = innerWidth < 700 ? 60 : 130;
   const resizeE = () => {
     dpr = Math.min(devicePixelRatio || 1, 2);
@@ -124,15 +135,11 @@
       const k = Math.sin(Math.PI * (p.life / p.max));
       const flick = 0.6 + 0.4 * Math.sin(p.life * 0.25 + p.seed);
       const a = k * flick * 0.9;
-      const g = ctx.createRadialGradient(p.x, p.y, 0, p.x, p.y, p.r * 5);
-      g.addColorStop(0, `rgba(255,214,150,${a})`);
-      g.addColorStop(0.3, `rgba(255,122,26,${a * 0.6})`);
-      g.addColorStop(1, "rgba(255,80,0,0)");
-      ctx.fillStyle = g;
-      ctx.beginPath();
-      ctx.arc(p.x, p.y, p.r * 5, 0, Math.PI * 2);
-      ctx.fill();
+      const d = p.r * 10;
+      ctx.globalAlpha = Math.max(0, a);
+      ctx.drawImage(sprite, p.x - d / 2, p.y - d / 2, d, d);
     }
+    ctx.globalAlpha = 1;
     if (!reduced) requestAnimationFrame(draw);
   };
   if (!reduced) requestAnimationFrame(draw);

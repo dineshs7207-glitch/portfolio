@@ -32,10 +32,14 @@ window.PORTFOLIO = {
   // Left empty, the form opens the visitor's email app with the message pre-filled.
   formEndpoint: "",
 
+  // Hovering a link opens a small card: `note` is its subtitle, `copy` adds a Copy button.
   links: [
-    { label: "Email",    handle: "Dinesh.work009@gmail.com",   url: "mailto:Dinesh.work009@gmail.com" },
-    { label: "LinkedIn", handle: "/in/dineshsarikonda",         url: "https://www.linkedin.com/in/dineshsarikonda" },
-    { label: "Phone",    handle: "615-413-7172",                url: "tel:+16154137172" }
+    { label: "Email",    handle: "Dinesh.work009@gmail.com", url: "mailto:Dinesh.work009@gmail.com",
+      note: "Write to me directly", action: "Compose email", copy: "Dinesh.work009@gmail.com" },
+    { label: "LinkedIn", handle: "/in/dineshsarikonda",      url: "https://www.linkedin.com/in/dineshsarikonda",
+      note: "Senior .NET Full Stack Developer", action: "Open profile", copy: "linkedin.com/in/dineshsarikonda" },
+    { label: "Phone",    handle: "615-413-7172",             url: "tel:+16154137172",
+      note: "Call or text", action: "Call now", copy: "615-413-7172" }
   ],
 
   /* ---------------------------------------------------------------------
